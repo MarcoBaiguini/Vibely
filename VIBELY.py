@@ -8,24 +8,10 @@ from sklearn.neighbors import NearestNeighbors
 
 st.set_page_config(page_title="Vibely - AI Music Recommender", page_icon="🎵", layout="centered")
 
-# ✅ Funzione aggiornata per scaricare da Google Drive (compatibile con Streamlit Cloud e file di grandi dimensioni)
-def download_file_from_google_drive(file_id, destination):
-    def get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
-
-    URL = "https://drive.google.com/uc?export=download"
-    session = requests.Session()
-
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    token = get_confirm_token(response)
-
-    if token:
-        params = {'id': file_id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
-
+# ✅ Funzione per scaricare file binari da URL (Hugging Face)
+def download_file_from_url(url, destination):
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
     with open(destination, "wb") as f:
         for chunk in response.iter_content(32768):
             if chunk:
@@ -34,20 +20,15 @@ def download_file_from_google_drive(file_id, destination):
 # ⬇️ Funzione per caricare i file pkl
 @st.cache_resource
 def load_optimized_data():
-    df_id = "1tTYGQviOX0kIPG3DETFfOB5ci7vtBZnD"
-    knn_id = "18xWJn2fegaiUbM_EqBwg5gGrOstxoO6M"
+    df_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/df_with_embeddings.pkl"
+    knn_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/knn_model.pkl"
     df_path = "df_with_embeddings.pkl"
     knn_path = "knn_model.pkl"
 
-    # 🔄 Elimina i file corrotti per forzare il nuovo download
-    if os.path.exists(df_path):
-        os.remove(df_path)
-    if os.path.exists(knn_path):
-        os.remove(knn_path)
-
-    # ⬇️ Scarica i file da Google Drive
-    download_file_from_google_drive(df_id, df_path)
-    download_file_from_google_drive(knn_id, knn_path)
+    if not os.path.exists(df_path):
+        download_file_from_url(df_url, df_path)
+    if not os.path.exists(knn_path):
+        download_file_from_url(knn_url, knn_path)
 
     with open(df_path, "rb") as f:
         df = pickle.load(f)
