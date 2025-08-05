@@ -8,33 +8,19 @@ from sklearn.neighbors import NearestNeighbors
 
 st.set_page_config(page_title="Vibely - AI Music Recommender", page_icon="🎵", layout="centered")
 
-# ✅ Funzione per scaricare file binari da URL (Hugging Face)
-def download_file_from_url(url, destination):
-    response = requests.get(url, stream=True)
+# ✅ Funzione per scaricare e caricare file pickle da Hugging Face
+def load_pickle_from_url(url):
+    response = requests.get(url)
     response.raise_for_status()
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(32768):
-            if chunk:
-                f.write(chunk)
+    return pickle.loads(response.content)
 
-# ⬇️ Funzione per caricare i file pkl
+# ⬇️ Funzione per caricare i dati
 @st.cache_resource
 def load_optimized_data():
     df_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/df_with_embeddings.pkl"
     knn_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/knn_model.pkl"
-    df_path = "df_with_embeddings.pkl"
-    knn_path = "knn_model.pkl"
-
-    if not os.path.exists(df_path):
-        download_file_from_url(df_url, df_path)
-    if not os.path.exists(knn_path):
-        download_file_from_url(knn_url, knn_path)
-
-    with open(df_path, "rb") as f:
-        df = pickle.load(f)
-    with open(knn_path, "rb") as f:
-        knn_model = pickle.load(f)
-
+    df = load_pickle_from_url(df_url)
+    knn_model = load_pickle_from_url(knn_url)
     return df, knn_model
 
 # ⬇️ Caricamento dati
