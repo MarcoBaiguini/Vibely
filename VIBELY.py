@@ -39,10 +39,15 @@ def load_optimized_data():
     df_path = "df_with_embeddings.pkl"
     knn_path = "knn_model.pkl"
 
-    if not os.path.exists(df_path):
-        download_file_from_google_drive(df_id, df_path)
-    if not os.path.exists(knn_path):
-        download_file_from_google_drive(knn_id, knn_path)
+    # 🔄 Elimina i file corrotti per forzare il nuovo download
+    if os.path.exists(df_path):
+        os.remove(df_path)
+    if os.path.exists(knn_path):
+        os.remove(knn_path)
+
+    # ⬇️ Scarica i file da Google Drive
+    download_file_from_google_drive(df_id, df_path)
+    download_file_from_google_drive(knn_id, knn_path)
 
     with open(df_path, "rb") as f:
         df = pickle.load(f)
