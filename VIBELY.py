@@ -8,19 +8,31 @@ from sklearn.neighbors import NearestNeighbors
 
 st.set_page_config(page_title="Vibely - AI Music Recommender", page_icon="🎵", layout="centered")
 
-# ✅ Funzione per scaricare e caricare file pickle da Hugging Face
-def load_pickle_from_url(url):
+# ⬇️ Funzione per scaricare da Hugging Face
+def download_from_huggingface(url, destination):
     response = requests.get(url)
     response.raise_for_status()
-    return pickle.loads(response.content)
+    with open(destination, "wb") as f:
+        f.write(response.content)
 
-# ⬇️ Funzione per caricare i dati
+# ⬇️ Funzione per caricare i file pkl
 @st.cache_resource
 def load_optimized_data():
     df_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/df_with_embeddings.pkl"
     knn_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/knn_model.pkl"
-    df = load_pickle_from_url(df_url)
-    knn_model = load_pickle_from_url(knn_url)
+    df_path = "df_with_embeddings.pkl"
+    knn_path = "knn_model.pkl"
+
+    if not os.path.exists(df_path):
+        download_from_huggingface(df_url, df_path)
+    if not os.path.exists(knn_path):
+        download_from_huggingface(knn_url, knn_path)
+
+    with open(df_path, "rb") as f:
+        df = pickle.load(f)
+    with open(knn_path, "rb") as f:
+        knn_model = pickle.load(f)
+
     return df, knn_model
 
 # ⬇️ Caricamento dati
@@ -54,7 +66,7 @@ if st.button("🎵 Scopri nuova musica"):
     else:
         recommendations = get_recommendations(input_ids, df, knn_model)
 
-        if recommendations.empty:
+        if isinstance(recommendations, list) or recommendations.empty:
             st.warning("Nessun suggerimento trovato. Riprova con altri brani.")
         else:
             st.subheader("✨ Brani consigliati:")
