@@ -8,28 +8,40 @@ from sklearn.neighbors import NearestNeighbors
 
 st.set_page_config(page_title="Vibely - AI Music Recommender", page_icon="🎵", layout="centered")
 
-# ⬇️ Funzione per caricare i file pkl da Hugging Face
+# ⬇️ Funzione robusta per caricare file pickle da Hugging Face
 @st.cache_resource
 def load_optimized_data():
     df_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/df_with_embeddings.pkl"
     knn_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/knn_model.pkl"
 
-    try:
-        with st.spinner("⏳ Caricamento dei dati..."):
+    def download_pickle(url):
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
 
-            df_response = requests.get(df_url)
-            df_response.raise_for_status()
-            df = pickle.load(io.BytesIO(df_response.content))
+            content_type = response.headers.get("Content-Type", "")
+            if "text/html" in content_type:
+                raise ValueError(f"Il contenuto ricevuto da {url} è HTML, non un file binario.")
 
-            knn_response = requests.get(knn_url)
-            knn_response.raise_for_status()
-            knn_model = pickle.load(io.BytesIO(knn_response.content))
+            return pickle.load(io.BytesIO(response.content))
 
-        return df, knn_model
+        except requests.exceptions.RequestException as e:
+            st.error(f"❌ Errore HTTP durante il download da {url}:\n{e}")
+        except ValueError as ve:
+            st.error(f"⚠️ Errore di contenuto:\n{ve}")
+        except pickle.UnpicklingError as pe:
+            st.error(f"🧨 Errore durante il caricamento pickle:\n{pe}")
+        except Exception as ex:
+            st.error(f"🚨 Errore generico:\n{ex}")
+        return None
 
-    except Exception as e:
-        st.error(f"Errore durante il caricamento dei dati: {e}")
-        return None, None
+    with st.spinner("⏳ Caricamento dei dati..."):
+        df = download_pickle(df_url)
+        knn_model = download_pickle(knn_url)
+
+    if df is None or knn_model is None:
+        st.error("❌ Impossibile caricare i dati. Controlla la connessione o gli URL.")
+    return df, knn_model
 
 # ⬇️ Caricamento dati
 df, knn_model = load_optimized_data()
@@ -58,12 +70,12 @@ if st.button("🎵 Scopri nuova musica"):
     input_ids = [link.split("/")[-1].split("?")[0] for link in links if "spotify.com/track" in link]
 
     if not input_ids:
-        st.warning("Inserisci almeno un link valido di brano Spotify.")
+        st.warning("⚠️ Inserisci almeno un link valido di brano Spotify.")
     else:
         recommendations = get_recommendations(input_ids, df, knn_model)
 
         if recommendations is None or len(recommendations) == 0:
-            st.warning("Nessun suggerimento trovato. Riprova con altri brani.")
+            st.warning("😕 Nessun suggerimento trovato. Riprova con altri brani.")
         else:
             st.subheader("✨ Brani consigliati:")
             for _, row in recommendations.iterrows():
