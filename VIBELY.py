@@ -8,25 +8,34 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(page_title="VIBLEY", page_icon="🎧", layout="wide")
 
-# Caricamento dati e modello da Hugging Face
+# ⬇️ Caricamento dati e modello da Hugging Face
 @st.cache_resource
 def load_optimized_data():
-    df_path = hf_hub_download(repo_id="MarcoBaiguini/vibely-data", filename="df_with_embeddings_compressed.joblib")
-    model_path = hf_hub_download(repo_id="MarcoBaiguini/vibely-data", filename="knn_model_compressed.joblib")
-    df = joblib.load(df_path)
-    knn = joblib.load(model_path)
-    return df, knn
+    try:
+        df_path = hf_hub_download(repo_id="MarcoBaiguini/vibely-data", filename="df_with_embeddings_compressed.joblib")
+        model_path = hf_hub_download(repo_id="MarcoBaiguini/vibely-data", filename="knn_model_compressed.joblib")
+
+        df = joblib.load(df_path)
+        knn = joblib.load(model_path)
+
+        return df, knn
+    except Exception as e:
+        st.error(f"❌ Errore nel caricamento dei dati: {e}")
+        return None, None
 
 with st.spinner("🚀 Caricamento dati e modello..."):
     df, knn_model = load_optimized_data()
 
+if df is None or knn_model is None:
+    st.stop()
+
 track_features = ['valence', 'danceability', 'energy']
 
-# Estrai ID da input
+# ⬇️ Estrai ID da input
 def extract_track_ids(text):
     return re.findall(r"https://open\.spotify\.com/track/([A-Za-z0-9]+)", text)
 
-# HEADER
+# ⬇️ HEADER
 st.markdown("""
 <div style='text-align:center;padding:30px 0;'>
   <h1 style='font-size:70px;color:#1DB954;font-weight:bold;'>VIBLEY</h1>
