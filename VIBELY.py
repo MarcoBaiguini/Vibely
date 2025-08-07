@@ -1,39 +1,37 @@
 import streamlit as st
 import pandas as pd
 import pickle
-import requests
-import os
 import numpy as np
+import requests
 from sklearn.neighbors import NearestNeighbors
 
 st.set_page_config(page_title="Vibely - AI Music Recommender", page_icon="🎵", layout="centered")
 
-# ⬇️ Funzione per scaricare da Hugging Face
+# ⬇️ Link ai file su Hugging Face (aggiornali se cambiano)
+EMBEDDINGS_URL = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/df_with_embeddings.pkl"
+MODEL_URL = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/knn_model.pkl"
+
+# ⬇️ Scarica e carica i file .pkl con barra di caricamento
 @st.cache_resource
-def load_optimized_data():
-    df_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/df_with_embeddings.pkl"
-    knn_url = "https://huggingface.co/MarcoBaiguini/vibely-data/resolve/main/knn_model.pkl"
-    df_path = "df_with_embeddings.pkl"
-    knn_path = "knn_model.pkl"
+def load_data():
+    progress = st.progress(0, text="⏳ Caricamento dei dati...")
 
-    if not os.path.exists(df_path):
-        with open(df_path, "wb") as f:
-            f.write(requests.get(df_url).content)
-    if not os.path.exists(knn_path):
-        with open(knn_path, "wb") as f:
-            f.write(requests.get(knn_url).content)
+    progress.progress(10, "🔄 Download dei dati da Hugging Face...")
 
-    with open(df_path, "rb") as f:
-        df = pickle.load(f)
-    with open(knn_path, "rb") as f:
-        knn_model = pickle.load(f)
+    df_response = requests.get(EMBEDDINGS_URL)
+    knn_response = requests.get(MODEL_URL)
 
+    progress.progress(50, "📦 Parsing dei dati...")
+
+    df = pickle.loads(df_response.content)
+    knn_model = pickle.loads(knn_response.content)
+
+    progress.progress(100, "✅ Dati caricati con successo!")
     return df, knn_model
 
-# ⬇️ Caricamento dati
-df, knn_model = load_optimized_data()
+df, knn_model = load_data()
 
-# ⬇️ Funzione di suggerimento
+# ⬇️ Sistema di raccomandazione
 def get_recommendations(input_ids, df, knn_model, k=5):
     input_embeddings = df[df['id'].isin(input_ids)]['embedding_list'].tolist()
     if not input_embeddings:
@@ -50,7 +48,7 @@ def get_recommendations(input_ids, df, knn_model, k=5):
 st.title("🎧 Vibely")
 st.markdown("Espandi i tuoi orizzonti musicali con l'intelligenza artificiale")
 
-user_input = st.text_area("Incolla qui i link delle tue canzoni da Spotify", height=150)
+user_input = st.text_area("Incolla qui i link delle tue canzoni da Spotify (uno per riga)", height=150)
 
 if st.button("🎵 Scopri nuova musica"):
     links = user_input.strip().split("\n")
